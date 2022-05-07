@@ -2,6 +2,7 @@
 name = "lovely_env_logger"
 version = "0.1.0" # don't forget to update html_root_url
 description = "a visually lovely env_logger"
+edition = '2021'
 repository = "https://github.com/borisfaure/lovely-env-logger"
 authors = ["Boris Faure <boris@fau.re>", "Sean McArthur <sean@seanmonstar>"]
 license = "MIT/Apache-2.0"
