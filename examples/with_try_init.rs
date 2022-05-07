@@ -1,5 +1,6 @@
-extern crate pretty_env_logger;
-#[macro_use] extern crate log;
+extern crate lovely_env_logger;
+#[macro_use]
+extern crate log;
 
 mod one {
     pub fn deep() {
@@ -8,7 +9,7 @@ mod one {
 }
 
 fn main() {
-    if let Err(e) = pretty_env_logger::try_init() {
+    if let Err(e) = lovely_env_logger::try_init_default() {
         eprintln!("Some custom msg {}", e);
         panic!("error!") // or whatever
     };
