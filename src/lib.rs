@@ -57,6 +57,8 @@ const RUST_LOG_ENV: &str = "RUST_LOG";
 pub struct Config {
     /// Whether to display a timestamp
     pub with_timestamp: bool,
+    /// Display levels as 5 or 3 letters
+    pub short_levels: bool,
 }
 
 impl Config {
@@ -65,15 +67,16 @@ impl Config {
     pub fn default() -> Config {
         Config {
             with_timestamp: false,
+            short_levels: false,
         }
     }
     /// Creates a new Config for the lovely env logger, with timestamps
     /// enabled
     #[inline]
     pub fn new_timed() -> Config {
-        Config {
-            with_timestamp: true,
-        }
+        let mut c = Self::default();
+        c.with_timestamp = true;
+        c
     }
 }
 
@@ -181,7 +184,7 @@ pub fn formatted_builder(config: Config) -> Builder {
         let max_width = max_target_width(target);
 
         let mut style = f.style();
-        let level = colored_level(&mut style, record.level());
+        let level = colored_level(&mut style, record.level(), config.short_levels);
 
         let mut style = f.style();
         let target = style.set_bold(true).value(Padded {
@@ -222,12 +225,22 @@ fn max_target_width(target: &str) -> usize {
     }
 }
 
-fn colored_level<'a>(style: &'a mut Style, level: Level) -> StyledValue<'a, &'static str> {
-    match level {
-        Level::Trace => style.set_color(Color::Magenta).value("TRACE"),
-        Level::Debug => style.set_color(Color::Blue).value("DEBUG"),
-        Level::Info => style.set_color(Color::Green).value("INFO "),
-        Level::Warn => style.set_color(Color::Yellow).value("WARN "),
-        Level::Error => style.set_color(Color::Red).value("ERROR"),
-    }
+fn colored_level<'a>(
+    style: &'a mut Style,
+    level: Level,
+    short_levels: bool,
+) -> StyledValue<'a, &'static str> {
+    let (color, msg) = match (level, short_levels) {
+        (Level::Trace, false) => (Color::Magenta, "TRACE"),
+        (Level::Trace, true) => (Color::Magenta, "TRC"),
+        (Level::Debug, false) => (Color::Blue, "DEBUG"),
+        (Level::Debug, true) => (Color::Blue, "DBG"),
+        (Level::Info, false) => (Color::Green, "INFO "),
+        (Level::Info, true) => (Color::Green, "INF"),
+        (Level::Warn, false) => (Color::Yellow, "WARN "),
+        (Level::Warn, true) => (Color::Yellow, "WRN"),
+        (Level::Error, false) => (Color::Red, "ERROR"),
+        (Level::Error, true) => (Color::Red, "ERR"),
+    };
+    style.set_color(color).value(msg)
 }
