@@ -190,9 +190,9 @@ pub fn formatted_builder(config: Config) -> Builder {
         });
         if config.with_timestamp {
             let time = f.timestamp_millis();
-            writeln!(f, " {} {} {} > {}", time, level, target, record.args(),)
+            writeln!(f, "{} {} {} > {}", time, level, target, record.args(),)
         } else {
-            writeln!(f, " {} {} > {}", level, target, record.args(),)
+            writeln!(f, "{} {} > {}", level, target, record.args(),)
         }
     });
 
