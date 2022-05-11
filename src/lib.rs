@@ -2,7 +2,7 @@
 #![deny(missing_docs)]
 #![doc(html_root_url = "https://docs.rs/lovely_env_logger/latest")]
 
-//! A logger configured via an environment variable which writes to standard
+//! A logger configured via environment variables which writes to standard
 //! error with nice colored output for log levels.
 //!
 //! ## Example
@@ -34,6 +34,21 @@
 //! This crate uses [env_logger][] internally, so the same ways of enabling
 //! logs through an environment variable are supported.
 //!
+//! ## Configuration through environment variables
+//! Some options can be set through environment variables that have priority
+//! over configuration set through the `Config` structure.
+//!
+//! The following options are set through environment variables named by
+//! adding a suffix added to `RUST_LOG` or the environment variable used to
+//! filter the traces.
+//!
+//! ### `RUST_LOG_WITH_TIMESTAMPS`
+//! Enable timestamps when set to `1`. Disable it otherwise.
+//!
+//! ### `RUST_LOG_SHORT_LEVELS`
+//! Display levels on 3 characters to `1`. Display them as 5 characters
+//! otherwise.
+//!
 //! [env_logger]: https://docs.rs/env_logger
 
 #[doc(hidden)]
@@ -41,6 +56,7 @@ pub extern crate env_logger;
 
 extern crate log;
 
+use std::env;
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -77,6 +93,27 @@ impl Config {
         let mut c = Self::default();
         c.with_timestamp = true;
         c
+    }
+
+    /// Creates a new Config for the lovely env logger,
+    /// with values from the defined environment_variable_prefix, or from the
+    /// fallback configuration
+    #[inline]
+    fn from_environment_variables(environment_variable_prefix: &str, fallback_cfg: Self) -> Self {
+        Config {
+            with_timestamp: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_TIMESTAMPS",
+            ) {
+                Some(v) => (v == "1"),
+                None => fallback_cfg.with_timestamp,
+            },
+            short_levels: match env::var_os(
+                environment_variable_prefix.to_owned() + "_SHORT_LEVELS",
+            ) {
+                Some(v) => (v == "1"),
+                None => fallback_cfg.short_levels,
+            },
+        }
     }
 }
 
@@ -160,12 +197,11 @@ pub fn try_init_custom_env(
     config: Config,
     environment_variable_name: &str,
 ) -> Result<(), log::SetLoggerError> {
-    let mut builder = formatted_builder(config);
-
+    let cfg = Config::from_environment_variables(environment_variable_name, config);
+    let mut builder = formatted_builder(cfg);
     if let Ok(s) = ::std::env::var(environment_variable_name) {
         builder.parse_filters(&s);
     }
-
     builder.try_init()
 }
 
