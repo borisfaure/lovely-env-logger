@@ -49,6 +49,12 @@
 //! Display levels on 3 characters to `1`. Display them as 5 characters
 //! otherwise.
 //!
+//! ### `RUST_LOG_WITH_FILE_NAME`
+//! Display the file calling the log macro when set to `1`. Disable it otherwise.
+//!
+//! ### `RUST_LOG_WITH_LINE_NUMBER`
+//! Display the line number calling the log macro when set to `1`. Disable it otherwise.
+//!
 //! [env_logger]: https://docs.rs/env_logger
 
 #[doc(hidden)]
@@ -75,6 +81,10 @@ pub struct Config {
     pub with_timestamp: bool,
     /// Display levels as 5 or 3 letters
     pub short_levels: bool,
+    /// Display the file calling the log macro
+    pub with_file_name: bool,
+    /// Display the line number calling the log macro
+    pub with_line_number: bool,
 }
 
 impl Config {
@@ -84,6 +94,8 @@ impl Config {
         Config {
             with_timestamp: false,
             short_levels: false,
+            with_file_name: false,
+            with_line_number: false,
         }
     }
     /// Creates a new Config for the lovely env logger, with timestamps
@@ -112,6 +124,18 @@ impl Config {
             ) {
                 Some(v) => (v == "1"),
                 None => fallback_cfg.short_levels,
+            },
+            with_file_name: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_FILE_NAME",
+            ) {
+                Some(v) => (v == "1"),
+                None => fallback_cfg.with_file_name,
+            },
+            with_line_number: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_LINE_NUMBER",
+            ) {
+                Some(v) => (v == "1"),
+                None => fallback_cfg.with_line_number,
             },
         }
     }
@@ -216,22 +240,26 @@ pub fn formatted_builder(config: Config) -> Builder {
     builder.format(move |f, record| {
         use std::io::Write;
 
-        let target = record.target();
-        let max_width = max_target_width(target);
+        let (target, location) = compute_target_and_location(&record, &config);
 
         let mut style = f.style();
         let level = colored_level(&mut style, record.level(), config.short_levels);
 
         let mut style = f.style();
-        let target = style.set_bold(true).value(Padded {
-            value: target,
-            width: max_width,
-        });
+        let target = style.set_bold(true).value(target);
         if config.with_timestamp {
             let time = f.timestamp_millis();
-            writeln!(f, "{} {} {} > {}", time, level, target, record.args(),)
+            writeln!(
+                f,
+                "{} {} {}{} > {}",
+                time,
+                level,
+                target,
+                location,
+                record.args(),
+            )
         } else {
-            writeln!(f, "{} {} > {}", level, target, record.args(),)
+            writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
         }
     });
 
@@ -249,13 +277,78 @@ impl<T: fmt::Display> fmt::Display for Padded<T> {
     }
 }
 
+enum OptionalPadded<T> {
+    None,
+    Some { value: T, width: usize },
+}
+
+impl<T: fmt::Display> fmt::Display for OptionalPadded<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let OptionalPadded::Some { value, width } = self {
+            write!(f, "{: <width$}", value, width = width)
+        } else {
+            fmt::Result::Ok(())
+        }
+    }
+}
+
 static MAX_MODULE_WIDTH: AtomicUsize = AtomicUsize::new(0);
 
-fn max_target_width(target: &str) -> usize {
+fn compute_target_and_location<'a>(
+    record: &log::Record<'a>,
+    config: &Config,
+) -> (Padded<&'a str>, OptionalPadded<String>) {
+    let target = record.target();
+    let opt_file = if config.with_file_name {
+        record.file()
+    } else {
+        None
+    };
+    let opt_line = if config.with_line_number {
+        record.line()
+    } else {
+        None
+    };
+    let target_len = target.len();
+    let (added_opt, added_len) = match (opt_file, opt_line) {
+        (None, None) => (None, 0),
+        (Some(file), None) => (Some(format!(":{}", file)), file.len() + 1),
+        (None, Some(line)) => {
+            let line_str: String = line.to_string();
+            (Some(format!(":{}", line_str)), line_str.len() + 1)
+        }
+        (Some(file), Some(line)) => {
+            let line_str: String = line.to_string();
+            (
+                Some(format!(":{}:{}", file, line_str)),
+                file.len() + line_str.len() + 2,
+            )
+        }
+    };
+    let full_width = max_target_width(target_len + added_len);
+    if let Some(added) = added_opt {
+        let target_padded = Padded {
+            value: target,
+            width: target_len,
+        };
+        let location_padded = OptionalPadded::Some {
+            value: added,
+            width: full_width - target_len,
+        };
+        (target_padded, location_padded)
+    } else {
+        let target_padded = Padded {
+            value: target,
+            width: full_width,
+        };
+        (target_padded, OptionalPadded::None)
+    }
+}
+fn max_target_width(target_len: usize) -> usize {
     let max_width = MAX_MODULE_WIDTH.load(Ordering::Relaxed);
-    if max_width < target.len() {
-        MAX_MODULE_WIDTH.store(target.len(), Ordering::Relaxed);
-        target.len()
+    if max_width < target_len {
+        MAX_MODULE_WIDTH.store(target_len, Ordering::Relaxed);
+        target_len
     } else {
         max_width
     }
