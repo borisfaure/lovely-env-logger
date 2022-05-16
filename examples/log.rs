@@ -7,6 +7,11 @@ mod nested {
         trace!("one level deep!");
     }
 }
+mod longer_nested {
+    pub fn deep() {
+        trace!("one level deep, but longer!");
+    }
+}
 
 fn main() {
     lovely_env_logger::init_default();
@@ -16,7 +21,16 @@ fn main() {
         return;
     }
 
+    debug!("deboogging");
+    info!("such information");
+    warn!("o_O");
+    error!("boom");
     self::nested::deep();
+    debug!("deboogging");
+    info!("such information");
+    warn!("o_O");
+    error!("boom");
+    self::longer_nested::deep();
     debug!("deboogging");
     info!("such information");
     warn!("o_O");
