@@ -62,6 +62,7 @@ pub extern crate env_logger;
 
 extern crate log;
 
+use std::default::Default;
 use std::env;
 use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -87,21 +88,23 @@ pub struct Config {
     pub with_line_number: bool,
 }
 
-impl Config {
+impl Default for Config {
     /// Creates a new Config for the lovely env logger
     #[inline]
-    pub fn default() -> Config {
-        Config {
+    fn default() -> Self {
+        Self {
             with_timestamp: false,
             short_levels: false,
             with_file_name: false,
             with_line_number: false,
         }
     }
+}
+impl Config {
     /// Creates a new Config for the lovely env logger, with timestamps
     /// enabled
     #[inline]
-    pub fn new_timed() -> Config {
+    pub fn new_timed() -> Self {
         let mut c = Self::default();
         c.with_timestamp = true;
         c
@@ -112,7 +115,7 @@ impl Config {
     /// fallback configuration
     #[inline]
     fn from_environment_variables(environment_variable_prefix: &str, fallback_cfg: Self) -> Self {
-        Config {
+        Self {
             with_timestamp: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_TIMESTAMPS",
             ) {
