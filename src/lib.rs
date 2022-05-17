@@ -78,8 +78,10 @@ const RUST_LOG_ENV: &str = "RUST_LOG";
 
 /// Configuration for the lovely env logger
 pub struct Config {
+    #[cfg(feature = "humantime")]
     /// Whether to display a timestamp
     pub with_timestamp: bool,
+
     /// Display levels as 5 or 3 letters
     pub short_levels: bool,
     /// Display the file calling the log macro
@@ -93,6 +95,7 @@ impl Default for Config {
     #[inline]
     fn default() -> Self {
         Self {
+            #[cfg(feature = "humantime")]
             with_timestamp: false,
             short_levels: false,
             with_file_name: false,
@@ -104,6 +107,7 @@ impl Config {
     /// Creates a new Config for the lovely env logger, with timestamps
     /// enabled
     #[inline]
+    #[cfg(feature = "humantime")]
     pub fn new_timed() -> Self {
         let mut c = Self::default();
         c.with_timestamp = true;
@@ -116,6 +120,7 @@ impl Config {
     #[inline]
     fn from_environment_variables(environment_variable_prefix: &str, fallback_cfg: Self) -> Self {
         Self {
+            #[cfg(feature = "humantime")]
             with_timestamp: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_TIMESTAMPS",
             ) {
@@ -250,18 +255,25 @@ pub fn formatted_builder(config: Config) -> Builder {
 
         let mut style = f.style();
         let target = style.set_bold(true).value(target);
-        if config.with_timestamp {
-            let time = f.timestamp_millis();
-            writeln!(
-                f,
-                "{} {} {}{} > {}",
-                time,
-                level,
-                target,
-                location,
-                record.args(),
-            )
-        } else {
+        #[cfg(feature = "humantime")]
+        {
+            if config.with_timestamp {
+                let time = f.timestamp_millis();
+                writeln!(
+                    f,
+                    "{} {} {}{} > {}",
+                    time,
+                    level,
+                    target,
+                    location,
+                    record.args(),
+                )
+            } else {
+                writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
+            }
+        }
+        #[cfg(not(feature = "humantime"))]
+        {
             writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
         }
     });
