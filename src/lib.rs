@@ -109,9 +109,10 @@ impl Config {
     #[inline]
     #[cfg(feature = "humantime")]
     pub fn new_timed() -> Self {
-        let mut c = Self::default();
-        c.with_timestamp = true;
-        c
+        Self {
+            with_timestamp: true,
+            ..Self::default()
+        }
     }
 
     /// Creates a new Config for the lovely env logger,
