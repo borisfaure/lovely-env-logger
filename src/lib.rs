@@ -249,7 +249,7 @@ pub fn formatted_builder(config: Config) -> Builder {
     builder.format(move |f, record| {
         use std::io::Write;
 
-        let (target, location) = compute_target_and_location(&record, &config);
+        let (target, location) = compute_target_and_location(record, &config);
 
         let mut style = f.style();
         let level = colored_level(&mut style, record.level(), config.short_levels);
