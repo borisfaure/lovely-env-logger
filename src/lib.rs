@@ -42,9 +42,6 @@
 //! adding a suffix added to `RUST_LOG` or the environment variable used to
 //! filter the traces.
 //!
-//! ### `RUST_LOG_WITH_TIMESTAMPS`
-//! Enable timestamps when set to `1`. Disable it otherwise.
-//!
 //! ### `RUST_LOG_SHORT_LEVELS`
 //! Display levels on 3 characters to `1`. Display them as 5 characters
 //! otherwise.
@@ -55,12 +52,29 @@
 //! ### `RUST_LOG_WITH_LINE_NUMBER`
 //! Display the line number calling the log macro when set to `1`. Disable it otherwise.
 //!
+//! ### `RUST_LOG_WITH_SYSTEM_TIMESTAMPS`
+//! Enable timestamps when set to `1`. Disable it otherwise.
+//! Requires to be compiled with the `humantime` feature.
+//!
+//! ### `RUST_LOG_WITH_RELATIVE_TIMESTAMPS`
+//! When set to `1`, display timestamps using the difference compared to the
+//! previous log, or the date of log if the difference is too large.
+//! Requires to be compiled with the `reltime` feature.
+//!
 //! [env_logger]: https://docs.rs/env_logger
 
 #[doc(hidden)]
 pub extern crate env_logger;
 
 extern crate log;
+
+#[cfg(feature = "reltime")]
+use chrono::{
+    offset::{Local, TimeZone},
+    DateTime, Timelike,
+};
+#[cfg(feature = "reltime")]
+use std::sync::{Arc, Mutex};
 
 use std::default::Default;
 use std::env;
@@ -80,7 +94,10 @@ const RUST_LOG_ENV: &str = "RUST_LOG";
 pub struct Config {
     #[cfg(feature = "humantime")]
     /// Whether to display a timestamp
-    pub with_timestamp: bool,
+    pub with_system_timestamp: bool,
+    #[cfg(feature = "reltime")]
+    /// Whether to display a timestamp as reltime
+    pub reltime: bool,
 
     /// Display levels as 5 or 3 letters
     pub short_levels: bool,
@@ -96,7 +113,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             #[cfg(feature = "humantime")]
-            with_timestamp: false,
+            with_system_timestamp: false,
+            #[cfg(feature = "reltime")]
+            reltime: false,
             short_levels: false,
             with_file_name: false,
             with_line_number: false,
@@ -110,7 +129,17 @@ impl Config {
     #[cfg(feature = "humantime")]
     pub fn new_timed() -> Self {
         Self {
-            with_timestamp: true,
+            with_system_timestamp: true,
+            ..Self::default()
+        }
+    }
+    /// Creates a new Config for the lovely env logger, with relative
+    /// timestamps enabled
+    #[inline]
+    #[cfg(feature = "reltime")]
+    pub fn new_reltime() -> Self {
+        Self {
+            reltime: true,
             ..Self::default()
         }
     }
@@ -122,11 +151,18 @@ impl Config {
     fn from_environment_variables(environment_variable_prefix: &str, fallback_cfg: Self) -> Self {
         Self {
             #[cfg(feature = "humantime")]
-            with_timestamp: match env::var_os(
-                environment_variable_prefix.to_owned() + "_WITH_TIMESTAMPS",
+            with_system_timestamp: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_SYSTEM_TIMESTAMPS",
             ) {
                 Some(v) => (v == "1"),
-                None => fallback_cfg.with_timestamp,
+                None => fallback_cfg.with_system_timestamp,
+            },
+            #[cfg(feature = "humantime")]
+            reltime: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_RELATIVE_TIMESTAMPS",
+            ) {
+                Some(v) => (v == "1"),
+                None => fallback_cfg.reltime,
             },
             short_levels: match env::var_os(
                 environment_variable_prefix.to_owned() + "_SHORT_LEVELS",
@@ -245,6 +281,7 @@ pub fn try_init_custom_env(
 /// for further details and usage.
 pub fn formatted_builder(config: Config) -> Builder {
     let mut builder = Builder::new();
+    let last_time = Arc::new(Mutex::new(Local.timestamp(0, 0)));
 
     builder.format(move |f, record| {
         use std::io::Write;
@@ -256,11 +293,30 @@ pub fn formatted_builder(config: Config) -> Builder {
 
         let mut style = f.style();
         let target = style.set_bold(true).value(target);
+        #[cfg(feature = "reltime")]
+        {
+            if config.reltime {
+                let reltime = compute_reltime(&last_time);
+                let mut style = f.style();
+                let is_delta = reltime.is_delta();
+                let reltime = style.set_bold(!is_delta).value(&reltime);
+
+                return writeln!(
+                    f,
+                    "{} {} {}{} > {}",
+                    reltime,
+                    level,
+                    target,
+                    location,
+                    record.args(),
+                );
+            }
+        }
         #[cfg(feature = "humantime")]
         {
-            if config.with_timestamp {
+            if config.with_system_timestamp {
                 let time = f.timestamp_millis();
-                writeln!(
+                return writeln!(
                     f,
                     "{} {} {}{} > {}",
                     time,
@@ -268,15 +324,10 @@ pub fn formatted_builder(config: Config) -> Builder {
                     target,
                     location,
                     record.args(),
-                )
-            } else {
-                writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
+                );
             }
         }
-        #[cfg(not(feature = "humantime"))]
-        {
-            writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
-        }
+        writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
     });
 
     builder
@@ -388,4 +439,53 @@ fn colored_level<'a>(
         (Level::Error, true) => (Color::Red, "ERR"),
     };
     style.set_color(color).value(msg)
+}
+
+enum RelTime {
+    Diff(u32),
+    DateTime(DateTime<Local>),
+}
+
+impl RelTime {
+    #[inline]
+    fn is_delta(self: &Self) -> bool {
+        match self {
+            Self::Diff(_) => true,
+            _ => false,
+        }
+    }
+}
+impl fmt::Display for RelTime {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Diff(diff) => {
+                write!(f, "[  +0.{:0>9}]", diff)
+            }
+            Self::DateTime(dt) => {
+                write!(f, "[{}]", dt.format("%b%e %T").to_string())
+            }
+        }
+    }
+}
+
+#[cfg(feature = "reltime")]
+fn compute_reltime(last_time: &Arc<Mutex<DateTime<Local>>>) -> RelTime {
+    let now = Local::now();
+    let mut old = last_time.lock().unwrap();
+    let old_date = old.date();
+    let old_time = old.time();
+    let now_date = now.date();
+    let now_time = now.time();
+    let reltime = if old_date == now_date
+        && old_time.hour() == now_time.hour()
+        && old_time.minute() == now_time.minute()
+        && old_time.second() == now_time.second()
+    {
+        let diff: u32 = now_time.nanosecond() - old_time.nanosecond();
+        RelTime::Diff(diff)
+    } else {
+        RelTime::DateTime(now)
+    };
+    *old = now;
+    reltime
 }
