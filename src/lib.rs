@@ -154,32 +154,32 @@ impl Config {
             with_system_timestamp: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_SYSTEM_TIMESTAMPS",
             ) {
-                Some(v) => (v == "1"),
+                Some(v) => v == "1",
                 None => fallback_cfg.with_system_timestamp,
             },
             #[cfg(feature = "humantime")]
             reltime: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_RELATIVE_TIMESTAMPS",
             ) {
-                Some(v) => (v == "1"),
+                Some(v) => v == "1",
                 None => fallback_cfg.reltime,
             },
             short_levels: match env::var_os(
                 environment_variable_prefix.to_owned() + "_SHORT_LEVELS",
             ) {
-                Some(v) => (v == "1"),
+                Some(v) => v == "1",
                 None => fallback_cfg.short_levels,
             },
             with_file_name: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_FILE_NAME",
             ) {
-                Some(v) => (v == "1"),
+                Some(v) => v == "1",
                 None => fallback_cfg.with_file_name,
             },
             with_line_number: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_LINE_NUMBER",
             ) {
-                Some(v) => (v == "1"),
+                Some(v) => v == "1",
                 None => fallback_cfg.with_line_number,
             },
         }
@@ -448,11 +448,8 @@ enum RelTime {
 
 impl RelTime {
     #[inline]
-    fn is_delta(self: &Self) -> bool {
-        match self {
-            Self::Diff(_) => true,
-            _ => false,
-        }
+    fn is_delta(&self) -> bool {
+        matches!(self, Self::Diff(_))
     }
 }
 impl fmt::Display for RelTime {
@@ -462,7 +459,7 @@ impl fmt::Display for RelTime {
                 write!(f, "[  +0.{:0>9}]", diff)
             }
             Self::DateTime(dt) => {
-                write!(f, "[{}]", dt.format("%b%e %T").to_string())
+                write!(f, "[{}]", dt.format("%b%e %T"))
             }
         }
     }
