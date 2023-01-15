@@ -69,10 +69,7 @@ pub extern crate env_logger;
 extern crate log;
 
 #[cfg(feature = "reltime")]
-use chrono::{
-    offset::{Local, TimeZone},
-    DateTime, Timelike,
-};
+use chrono::{DateTime, Local, Timelike};
 #[cfg(feature = "reltime")]
 use std::sync::{Arc, Mutex};
 
@@ -281,7 +278,7 @@ pub fn try_init_custom_env(
 /// for further details and usage.
 pub fn formatted_builder(config: Config) -> Builder {
     let mut builder = Builder::new();
-    let last_time = Arc::new(Mutex::new(Local.timestamp(0, 0)));
+    let last_time = Arc::new(Mutex::new(Local::now()));
 
     builder.format(move |f, record| {
         use std::io::Write;
@@ -469,9 +466,9 @@ impl fmt::Display for RelTime {
 fn compute_reltime(last_time: &Arc<Mutex<DateTime<Local>>>) -> RelTime {
     let now = Local::now();
     let mut old = last_time.lock().unwrap();
-    let old_date = old.date();
+    let old_date = old.date_naive();
     let old_time = old.time();
-    let now_date = now.date();
+    let now_date = now.date_naive();
     let now_time = now.time();
     let reltime = if old_date == now_date
         && old_time.hour() == now_time.hour()
