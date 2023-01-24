@@ -300,7 +300,7 @@ pub fn formatted_builder(config: Config) -> Builder {
 
                 return writeln!(
                     f,
-                    "{} {} {}{} > {}",
+                    "{} {} {}{} {}",
                     reltime,
                     level,
                     target,
@@ -315,7 +315,7 @@ pub fn formatted_builder(config: Config) -> Builder {
                 let time = f.timestamp_millis();
                 return writeln!(
                     f,
-                    "{} {} {}{} > {}",
+                    "{} {} {}{} {}",
                     time,
                     level,
                     target,
