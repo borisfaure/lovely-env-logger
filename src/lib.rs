@@ -154,7 +154,7 @@ impl Config {
                 Some(v) => v == "1",
                 None => fallback_cfg.with_system_timestamp,
             },
-            #[cfg(feature = "humantime")]
+            #[cfg(feature = "reltime")]
             reltime: match env::var_os(
                 environment_variable_prefix.to_owned() + "_WITH_RELATIVE_TIMESTAMPS",
             ) {
@@ -278,6 +278,7 @@ pub fn try_init_custom_env(
 /// for further details and usage.
 pub fn formatted_builder(config: Config) -> Builder {
     let mut builder = Builder::new();
+    #[cfg(feature = "reltime")]
     let last_time = Arc::new(Mutex::new(Local::now()));
 
     builder.format(move |f, record| {
@@ -438,17 +439,20 @@ fn colored_level<'a>(
     style.set_color(color).value(msg)
 }
 
+#[cfg(feature = "reltime")]
 enum RelTime {
     Diff(u32),
     DateTime(DateTime<Local>),
 }
 
+#[cfg(feature = "reltime")]
 impl RelTime {
     #[inline]
     fn is_delta(&self) -> bool {
         matches!(self, Self::Diff(_))
     }
 }
+#[cfg(feature = "reltime")]
 impl fmt::Display for RelTime {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
