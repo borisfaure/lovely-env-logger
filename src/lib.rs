@@ -419,11 +419,7 @@ fn max_target_width(target_len: usize) -> usize {
     }
 }
 
-fn colored_level<'a>(
-    style: &'a mut Style,
-    level: Level,
-    short_levels: bool,
-) -> StyledValue<'a, &'static str> {
+fn colored_level(style: &mut Style, level: Level, short_levels: bool) -> StyledValue<&'static str> {
     let (color, msg) = match (level, short_levels) {
         (Level::Trace, false) => (Color::Magenta, "TRACE"),
         (Level::Trace, true) => (Color::Magenta, "TRC"),
