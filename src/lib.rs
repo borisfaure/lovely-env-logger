@@ -350,7 +350,7 @@ enum OptionalPadded<T> {
 impl<T: fmt::Display> fmt::Display for OptionalPadded<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let OptionalPadded::Some { value, width } = self {
-            write!(f, "{: <width$}", value, width = width)
+            write!(f, "{value: <width$}")
         } else {
             fmt::Result::Ok(())
         }
@@ -377,15 +377,15 @@ fn compute_target_and_location<'a>(
     let target_len = target.len();
     let (added_opt, added_len) = match (opt_file, opt_line) {
         (None, None) => (None, 0),
-        (Some(file), None) => (Some(format!(":{}", file)), file.len() + 1),
+        (Some(file), None) => (Some(format!(":{file}")), file.len() + 1),
         (None, Some(line)) => {
             let line_str: String = line.to_string();
-            (Some(format!(":{}", line_str)), line_str.len() + 1)
+            (Some(format!(":{line_str}")), line_str.len() + 1)
         }
         (Some(file), Some(line)) => {
             let line_str: String = line.to_string();
             (
-                Some(format!(":{}:{}", file, line_str)),
+                Some(format!(":{file}:{line_str}")),
                 file.len() + line_str.len() + 2,
             )
         }
@@ -457,7 +457,7 @@ impl fmt::Display for RelTime {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Diff(diff) => {
-                write!(f, "[  +0.{:0>9}]", diff)
+                write!(f, "[  +0.{diff:0>9}]")
             }
             Self::DateTime(dt) => {
                 write!(f, "[{}]", dt.format("%b%e %T"))
