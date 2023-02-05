@@ -52,6 +52,9 @@
 //! ### `RUST_LOG_WITH_LINE_NUMBER`
 //! Display the line number calling the log macro when set to `1`. Disable it otherwise.
 //!
+//! ### `RUST_LOG_WITH_PADDING`
+//! Display the log lines with padding after module name, when set to `1`. Disable it otherwise.
+//!
 //! ### `RUST_LOG_WITH_SYSTEM_TIMESTAMPS`
 //! Enable timestamps when set to `1`. Disable it otherwise.
 //! Requires to be compiled with the `humantime` feature.
@@ -102,6 +105,8 @@ pub struct Config {
     pub with_file_name: bool,
     /// Display the line number calling the log macro
     pub with_line_number: bool,
+    /// Pad the log line after module names
+    pub with_padding: bool,
 }
 
 impl Default for Config {
@@ -116,6 +121,7 @@ impl Default for Config {
             short_levels: false,
             with_file_name: false,
             with_line_number: false,
+            with_padding: false,
         }
     }
 }
@@ -178,6 +184,12 @@ impl Config {
             ) {
                 Some(v) => v == "1",
                 None => fallback_cfg.with_line_number,
+            },
+            with_padding: match env::var_os(
+                environment_variable_prefix.to_owned() + "_WITH_PADDING",
+            ) {
+                Some(v) => v == "1",
+                None => fallback_cfg.with_padding,
             },
         }
     }
@@ -390,7 +402,11 @@ fn compute_target_and_location<'a>(
             )
         }
     };
-    let full_width = max_target_width(target_len + added_len);
+    let full_width = if config.with_padding {
+        max_target_width(target_len + added_len)
+    } else {
+        target_len + added_len
+    };
     if let Some(added) = added_opt {
         let target_padded = Padded {
             value: target,
