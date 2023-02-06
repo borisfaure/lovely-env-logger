@@ -22,7 +22,7 @@ fn main() {
         return;
     }
 
-    debug!("deboogging");
+    debug!("some nice message to help debugging");
     thread::sleep(time::Duration::from_millis(100));
     info!("such information");
     thread::sleep(time::Duration::from_millis(357));
@@ -32,21 +32,24 @@ fn main() {
     thread::sleep(time::Duration::from_millis(100));
     self::nested::deep();
     thread::sleep(time::Duration::from_millis(900));
-    debug!("deboogging");
+    debug!("this message is useless");
     thread::sleep(time::Duration::from_millis(100));
-    info!("such information");
+    info!("such information, again");
     thread::sleep(time::Duration::from_millis(100));
-    warn!("o_O");
+    warn!("O_o");
     thread::sleep(time::Duration::from_millis(100));
     error!("boom");
     thread::sleep(time::Duration::from_millis(100));
     self::longer_nested::deep();
     thread::sleep(time::Duration::from_millis(100));
-    debug!("deboogging");
+    debug!("will it boom again?");
     thread::sleep(time::Duration::from_millis(100));
     info!("such information");
     thread::sleep(time::Duration::from_millis(100));
-    warn!("o_O");
+    warn!("    /!\\   /!\\   /!\\");
     thread::sleep(time::Duration::from_millis(2300));
-    error!("boom");
+    error!("    _       _       _   ");
+    error!("  >(.)__  =(.)__  <(.)__");
+    error!("   (___/   (___/   (___/");
+    error!("");
 }

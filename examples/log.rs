@@ -21,17 +21,17 @@ fn main() {
         return;
     }
 
-    debug!("deboogging");
+    debug!("some nice message to help debugging");
     info!("such information");
     warn!("o_O");
     error!("boom");
     self::nested::deep();
-    debug!("deboogging");
+    debug!("some nice message to help debugging");
     info!("such information");
     warn!("o_O");
     error!("boom");
     self::longer_nested::deep();
-    debug!("deboogging");
+    debug!("some nice message to help debugging");
     info!("such information");
     warn!("o_O");
     error!("boom");

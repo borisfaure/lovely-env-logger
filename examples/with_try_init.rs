@@ -17,6 +17,6 @@ fn main() {
     info!("such information");
     warn!("o_O");
     error!("boom");
-    debug!("deboogging");
+    debug!("some nice message to help debugging");
     self::one::deep();
 }
