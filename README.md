@@ -32,7 +32,7 @@ extern crate lovely_env_logger;
 #[macro_use] extern crate log;
 
 fn main() {
-    lovely_env_logger::init();
+    lovely_env_logger::init_default();
     info!("such information");
     warn!("o_O");
     error!("much error");
