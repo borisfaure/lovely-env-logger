@@ -22,7 +22,7 @@ Add the dependency to your `Cargo.toml`:
 ```toml
 [dependencies]
 log = "0.4"
-lovely_env_logger = "0.5"
+lovely_env_logger = "0.6"
 ```
 
 Add some usage to your application:
