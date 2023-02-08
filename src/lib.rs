@@ -337,7 +337,11 @@ pub fn formatted_builder(config: Config) -> Builder {
                 );
             }
         }
-        writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
+        if config.with_padding {
+            writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
+        } else {
+            writeln!(f, "{} {}{} {}", level, target, location, record.args(),)
+        }
     });
 
     builder
