@@ -9,7 +9,11 @@ It is configured via an environment variable and writes to standard
 error with nice colored output for log levels.
 Originally a fork from [pretty_env_logger](https://github.com/seanmonstar/pretty-env-logger).
 
-![example output](readme-example.png)
+## Screenshots
+![example default output](log_default.png)
+![example output with relative timestamps, short
+levels](log_relative_timestamps.png)
+![example output with system timestamps, file names and line numbers](log_file_line_system_time.png)
 
 ## Usage
 
