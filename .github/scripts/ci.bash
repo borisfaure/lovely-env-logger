@@ -9,11 +9,6 @@ run_fmt() {
     cargo fmt --check
 }
 
-run_clippy() {
-    rustup component add clippy-preview
-    cargo clippy -- -D warnings
-}
-
 declare -A FEATURES
 FEATURES=(
     "humantime"
@@ -24,6 +19,16 @@ FEATURES=(
     "reltime regex"
     "humantime reltime regex"
 )
+
+
+run_clippy() {
+    rustup component add clippy-preview
+    cargo clippy -- -D warnings
+    for FEAT in "${FEATURES[@]}"
+    do
+        cargo clippy --no-default-features --features "$FEAT" -- -D warnings
+    done
+}
 
 run_check() {
     cargo check --all-features
