@@ -4,6 +4,11 @@ set -e
 set -x
 set -u
 
+run_doc() {
+    rustup component add rust-docs
+    cargo doc
+}
+
 run_fmt() {
     rustup component add rustfmt
     cargo fmt --check
@@ -67,6 +72,9 @@ run_build_release() {
 }
 
 case $1 in
+    doc)
+        run_doc
+        ;;
     fmt)
         run_fmt
         ;;
