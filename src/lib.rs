@@ -82,7 +82,7 @@ use std::fmt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use env_logger::{
-    fmt::{Color, Style, StyledValue},
+    fmt::style::{AnsiColor, Style},
     Builder,
 };
 use log::Level;
@@ -125,6 +125,7 @@ impl Default for Config {
         }
     }
 }
+
 impl Config {
     /// Creates a new Config for the lovely env logger, with timestamps
     /// enabled
@@ -298,25 +299,32 @@ pub fn formatted_builder(config: Config) -> Builder {
 
         let (target, location) = compute_target_and_location(record, &config);
 
-        let mut style = f.style();
-        let level = colored_level(&mut style, record.level(), config.short_levels);
+        let level = LevelStr {
+            level: record.level(),
+            short: config.short_levels,
+        };
 
-        let mut style = f.style();
-        let target = style.set_bold(true).value(target);
+        let bold = Style::new().bold();
         #[cfg(feature = "reltime")]
         {
             if config.reltime {
                 let reltime = compute_reltime(&last_time);
-                let mut style = f.style();
-                let is_delta = reltime.is_delta();
-                let reltime = style.set_bold(!is_delta).value(&reltime);
+                let reltime_style = if reltime.is_delta() {
+                    Style::new()
+                } else {
+                    bold
+                };
 
                 return writeln!(
                     f,
-                    "{} {} {}{} {}",
+                    "{}{}{} {} {}{}{}{} {}",
+                    reltime_style.render(),
                     reltime,
+                    reltime_style.render_reset(),
                     level,
+                    bold.render(),
                     target,
+                    bold.render_reset(),
                     location,
                     record.args(),
                 );
@@ -328,19 +336,39 @@ pub fn formatted_builder(config: Config) -> Builder {
                 let time = f.timestamp_millis();
                 return writeln!(
                     f,
-                    "{} {} {}{} {}",
+                    "{} {} {}{}{}{} {}",
                     time,
                     level,
+                    bold.render(),
                     target,
+                    bold.render_reset(),
                     location,
                     record.args(),
                 );
             }
         }
         if config.with_padding {
-            writeln!(f, "{} {}{} > {}", level, target, location, record.args(),)
+            writeln!(
+                f,
+                "{} {}{}{}{} > {}",
+                level,
+                bold.render(),
+                target,
+                bold.render_reset(),
+                location,
+                record.args(),
+            )
         } else {
-            writeln!(f, "{} {}{} {}", level, target, location, record.args(),)
+            writeln!(
+                f,
+                "{} {}{}{}{} {}",
+                level,
+                bold.render(),
+                target,
+                bold.render_reset(),
+                location,
+                record.args(),
+            )
         }
     });
 
@@ -439,20 +467,51 @@ fn max_target_width(target_len: usize) -> usize {
     }
 }
 
-fn colored_level(style: &mut Style, level: Level, short_levels: bool) -> StyledValue<&'static str> {
-    let (color, msg) = match (level, short_levels) {
-        (Level::Trace, false) => (Color::Magenta, "TRACE"),
-        (Level::Trace, true) => (Color::Magenta, "TRC"),
-        (Level::Debug, false) => (Color::Blue, "DEBUG"),
-        (Level::Debug, true) => (Color::Blue, "DBG"),
-        (Level::Info, false) => (Color::Green, "INFO "),
-        (Level::Info, true) => (Color::Green, "INF"),
-        (Level::Warn, false) => (Color::Yellow, "WARN "),
-        (Level::Warn, true) => (Color::Yellow, "WRN"),
-        (Level::Error, false) => (Color::Red, "ERROR"),
-        (Level::Error, true) => (Color::Red, "ERR"),
-    };
-    style.set_color(color).value(msg)
+/// Struct to display a colored log level
+struct LevelStr {
+    /// The level to display
+    level: Level,
+    /// Whether to display the level on 3 characters
+    short: bool,
+}
+impl fmt::Display for LevelStr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (style, lvl) = match (self.level, self.short) {
+            (Level::Trace, false) => (
+                Style::new()
+                    .bold()
+                    .fg_color(Some(AnsiColor::Magenta.into())),
+                "TRACE",
+            ),
+            (Level::Trace, true) => (
+                Style::new()
+                    .bold()
+                    .fg_color(Some(AnsiColor::Magenta.into())),
+                "TRC",
+            ),
+            (Level::Debug, false) => (Style::new().fg_color(Some(AnsiColor::Blue.into())), "DEBUG"),
+            (Level::Debug, true) => (Style::new().fg_color(Some(AnsiColor::Blue.into())), "DBG"),
+            (Level::Info, false) => (
+                Style::new().fg_color(Some(AnsiColor::Green.into())),
+                "INFO ",
+            ),
+            (Level::Info, true) => (Style::new().fg_color(Some(AnsiColor::Green.into())), "INF"),
+            (Level::Warn, false) => (
+                Style::new().fg_color(Some(AnsiColor::Yellow.into())),
+                "WARN ",
+            ),
+            (Level::Warn, true) => (Style::new().fg_color(Some(AnsiColor::Yellow.into())), "WRN"),
+            (Level::Error, false) => (
+                Style::new().bold().fg_color(Some(AnsiColor::Red.into())),
+                "ERROR",
+            ),
+            (Level::Error, true) => (
+                Style::new().bold().fg_color(Some(AnsiColor::Red.into())),
+                "ERR",
+            ),
+        };
+        write!(f, "{}{}{}", style.render(), lvl, style.render_reset())
+    }
 }
 
 #[cfg(feature = "reltime")]
