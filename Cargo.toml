@@ -27,7 +27,7 @@ optional = true
 
 [dependencies.env_logger]
 # please also update doc link on examples/with_builder_1.rs
-version = "0.10"
+version = "0.11"
 default-features = false
 features = ["auto-color"]
 
