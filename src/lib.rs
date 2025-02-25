@@ -543,10 +543,10 @@ impl fmt::Display for RelTime {
 
 #[cfg(feature = "reltime")]
 fn compute_reltime(last_time: &Arc<Mutex<DateTime<Local>>>) -> RelTime {
-    let now = Local::now();
     let mut old = last_time.lock().unwrap();
     let old_date = old.date_naive();
     let old_time = old.time();
+    let now = Local::now();
     let now_date = now.date_naive();
     let now_time = now.time();
     let reltime = if old_date == now_date
@@ -554,8 +554,13 @@ fn compute_reltime(last_time: &Arc<Mutex<DateTime<Local>>>) -> RelTime {
         && old_time.minute() == now_time.minute()
         && old_time.second() == now_time.second()
     {
-        let diff: u32 = now_time.nanosecond() - old_time.nanosecond();
-        RelTime::Diff(diff)
+        let old_ns = old_time.nanosecond();
+        let now_ns = now_time.nanosecond();
+        if old_ns > now_ns {
+            RelTime::Diff(0)
+        } else {
+            RelTime::Diff(now_ns - old_ns)
+        }
     } else {
         RelTime::DateTime(now)
     };

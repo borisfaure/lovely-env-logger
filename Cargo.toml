@@ -1,6 +1,6 @@
 [package]
 name = "lovely_env_logger"
-version = "0.6.1"
+version = "0.6.2"
 description = "a visually lovely env_logger"
 edition = '2021'
 repository = "https://github.com/borisfaure/lovely-env-logger"
